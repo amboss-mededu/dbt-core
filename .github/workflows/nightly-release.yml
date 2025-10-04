@@ -15,8 +15,8 @@ name: Nightly Test Release to GitHub and PyPI
 
 on:
   workflow_dispatch: # for manual triggering
-  schedule:
-    - cron: 0 9 * * *
+  # schedule:
+  #   - cron: 0 9 * * *
 
 permissions:
   contents: write # this is the permission that allows creating a new release
