@@ -3,7 +3,7 @@ from typing import Dict
 import agate
 import pytest
 
-from dbt.artifacts.resources import FunctionReturnType
+from dbt.artifacts.resources import FunctionReturns
 from dbt.artifacts.resources.types import FunctionType
 from dbt.contracts.graph.nodes import FunctionNode
 from dbt.tests.util import run_dbt
@@ -18,10 +18,10 @@ functions:
     description: Doubles whatever number is passed in
     arguments:
       - name: value
-        type: float
+        data_type: float
         description: A number to be doubled
-    return_type:
-      type: float
+    returns:
+      data_type: float
 """
 
 
@@ -46,9 +46,9 @@ class TestBasicSQLUDF(BasicUDFSetup):
         assert len(function_node.arguments) == 1
         argument = function_node.arguments[0]
         assert argument.name == "value"
-        assert argument.type == "float"
+        assert argument.data_type == "float"
         assert argument.description == "A number to be doubled"
-        assert function_node.return_type == FunctionReturnType(type="float")
+        assert function_node.returns == FunctionReturns(data_type="float")
 
 
 class TestCreationOfUDFs(BasicUDFSetup):
@@ -63,8 +63,8 @@ class TestCreationOfUDFs(BasicUDFSetup):
 
         argument = function_node.arguments[0]
         assert argument.name == "value"
-        assert argument.type == "float"
-        assert results[0].node.return_type == FunctionReturnType(type="float")
+        assert argument.data_type == "float"
+        assert results[0].node.returns == FunctionReturns(data_type="float")
 
 
 class TestCanInlineShowUDF(BasicUDFSetup):
@@ -89,6 +89,25 @@ class TestCanCallUDFInModel(BasicUDFSetup):
 
     def test_can_call_udf_in_model(self, project):
         run_dbt(["build"])
+
+        result = run_dbt(["show", "--select", "double_it_model"])
+        assert len(result.results) == 1
+        agate_table = result.results[0].agate_table
+        assert isinstance(agate_table, agate.Table)
+        assert agate_table.column_names == ("double_it",)
+        assert agate_table.rows == [(2.0,)]
+
+
+class TestCanUseWithEmptyMode(BasicUDFSetup):
+
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {
+            "double_it_model.sql": "select {{ function('double_it') }}(1) as double_it",
+        }
+
+    def test_can_use_with_empty_model(self, project):
+        run_dbt(["build", "--empty"])
 
         result = run_dbt(["show", "--select", "double_it_model"])
         assert len(result.results) == 1
