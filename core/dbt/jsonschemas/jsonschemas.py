@@ -1,5 +1,4 @@
 import json
-import os
 import re
 from datetime import date, datetime
 from pathlib import Path
@@ -141,9 +140,6 @@ def _get_allowed_config_fields_from_error_path(
 
 
 def _can_run_validations() -> bool:
-    if not os.environ.get("DBT_ENV_PRIVATE_RUN_JSONSCHEMA_VALIDATIONS"):
-        return False
-
     invocation_context = get_invocation_context()
     return invocation_context.adapter_types.issubset(_JSONSCHEMA_SUPPORTED_ADAPTERS)
 
@@ -269,6 +265,11 @@ def validate_model_config(config: Dict[str, Any], file_path: str) -> None:
             if len(error.path) == 0:
                 key_path = error_path_to_string(error)
                 for key in keys:
+                    # Special case for pre/post hook keys as they are updated during config parsing
+                    # from the user-provided pre_hook/post_hook to pre-hook/post-hook keys.
+                    # Avoids false positives as described in https://github.com/dbt-labs/dbt-core/issues/12087
+                    if key in ("post-hook", "pre-hook"):
+                        continue
                     deprecations.warn(
                         "custom-key-in-config-deprecation",
                         key=key,
