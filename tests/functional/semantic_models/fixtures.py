@@ -126,6 +126,7 @@ semantic_model_descriptions = """
 {% docs dimension_description %} bar {% enddocs %}
 {% docs measure_description %} baz {% enddocs %}
 {% docs entity_description %} qux {% enddocs %}
+{% docs simple_metric_description %} describe away! {% enddocs %}
 """
 
 semantic_model_people_yml_with_docs = """
@@ -661,10 +662,7 @@ semantic_model_schema_yml_v2_template_for_primary_entity_tests = """models:
           meta:
           component_level: "original_meta"
         dimension:
-          name: id_dim
-          label: "ID Dimension"
           type: categorical
-          is_partition: true
         entity:
           name: id_entity
           description: This is the id entity, and it is the primary entity.
@@ -702,14 +700,6 @@ semantic_model_schema_yml_v2_with_primary_entity_only_on_column = (
     )
 )
 
-semantic_model_schema_yml_v2_with_twice_declared_primary_entity = (
-    semantic_model_schema_yml_v2_template_for_primary_entity_tests.format(
-        primary_entity_setting="primary_entity: id_entity",
-        id_entity_type="primary",
-        other_id_entity_type="foreign",
-    )
-)
-
 semantic_model_schema_yml_v2_primary_entity_only_on_model = (
     semantic_model_schema_yml_v2_template_for_primary_entity_tests.format(
         primary_entity_setting="primary_entity: id_entity",
@@ -717,23 +707,6 @@ semantic_model_schema_yml_v2_primary_entity_only_on_model = (
         other_id_entity_type="foreign",
     )
 )
-
-semantic_model_schema_yml_v2_with_two_primary_entities_and_no_model_declaration = (
-    semantic_model_schema_yml_v2_template_for_primary_entity_tests.format(
-        primary_entity_setting="",
-        id_entity_type="primary",
-        other_id_entity_type="primary",
-    )
-)
-
-semantic_model_schema_yml_v2_with_two_primary_entities_and_model_declaration = (
-    semantic_model_schema_yml_v2_template_for_primary_entity_tests.format(
-        primary_entity_setting="primary_entity: id_entity",
-        id_entity_type="primary",
-        other_id_entity_type="primary",
-    )
-)
-
 
 semantic_model_schema_yml_v2 = """models:
   - name: fct_revenue
@@ -873,6 +846,26 @@ schema_yml_v2_simple_metric_on_model_1 = """
         conversion_metric: simple_metric_2
 """
 
+schema_yml_v2_metric_with_doc_jinja = """
+      - name: simple_metric_with_doc_jinja
+        description: "{{ doc('simple_metric_description') }}"
+        label: Simple Metric With Doc Jinja
+        type: simple
+        agg: count
+        expr: id
+"""
+
+schema_yml_v2_metric_with_filter_dimension_jinja = """
+      - name: simple_metric_with_filter_dimension_jinja
+        description: This is a description
+        label: Simple Metric With Doc Jinja
+        type: simple
+        agg: count
+        expr: id
+        filter: |
+          {{ Dimension('id_entity__id_dim') }} > 0
+"""
+
 schema_yml_v2_cumulative_metric_missing_input_metric = """
     metrics:
       - name: cumulative_metric
@@ -901,6 +894,30 @@ schema_yml_v2_conversion_metric_missing_base_metric = """
 """
 
 schema_yml_v2_standalone_simple_metric = textwrap.dedent(schema_yml_v2_simple_metric_on_model_1)
+
+schema_yml_v2_standalone_metrics_template = """
+metrics:
+  - name: standalone_conversion_metric
+    description: {description}
+    label: Standalone Conversion Metric
+    type: conversion
+    entity: id_entity
+    calculation: conversion_rate
+    base_metric: simple_metric
+    conversion_metric: simple_metric_2
+    {filter}
+"""
+
+schema_yml_v2_standalone_metrics = schema_yml_v2_standalone_metrics_template.format(
+    description="This is our standalone conversion metric.",
+    filter="filter: id > 0",
+)
+
+schema_yml_v2_standalone_metrics_with_doc_jinja = schema_yml_v2_standalone_metrics_template.format(
+    description="\"{{ doc('simple_metric_description') }}\"",
+    filter="""filter: |
+      {{ Dimension('id_entity__id_dim') }} > 0""",
+)
 
 derived_semantics_yml = """
     derived_semantics:
